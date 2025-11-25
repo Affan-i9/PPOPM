@@ -47,5 +47,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             echo json_encode(['status' => 'error', 'message' => 'Gagal update database']);
         }
     }
+
+    // 3. Hapus User
+    elseif ($action === 'delete_user') {
+        // Ambil info foto sebelum hapus
+        $stmt = $pdo->prepare("SELECT foto_profil FROM users WHERE id = ?");
+        $stmt->execute([$id]);
+        $user = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        // Hapus dari DB (Cascade ke absensi)
+        $del = $pdo->prepare("DELETE FROM users WHERE id = ?");
+        if ($del->execute([$id])) {
+            // Hapus file foto jika ada
+            if ($user && !empty($user['foto_profil'])) {
+                $file = __DIR__ . '/../' . $user['foto_profil'];
+                if (file_exists($file)) unlink($file);
+            }
+            echo json_encode(['status' => 'success']);
+        } else {
+            echo json_encode(['status' => 'error', 'message' => 'Gagal hapus data']);
+        }
+    }
 }
 ?>

@@ -142,7 +142,7 @@ $logs = $stmt_log->fetchAll();
                     <?= htmlspecialchars($user['cabang_olahraga']) ?>
                 </span>
 
-                <div class="bg-white p-3 rounded-3 mx-auto" style="max-width: 220px;">
+                <div class="bg-white p-3 rounded-3 mx-auto" style="max-width: 220px;" id="qr-container">
                     <?php if ($user['qr_code']): ?>
                         <img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=<?= $user['qr_code'] ?>" class="img-fluid" alt="QR Code">
                         <small class="d-block mt-2 text-dark font-monospace fw-bold"><?= $user['qr_code'] ?></small>
@@ -173,7 +173,7 @@ $logs = $stmt_log->fetchAll();
                                 <th>Status</th>
                             </tr>
                         </thead>
-                        <tbody>
+                        <tbody id="attendance-log-body">
                             <?php if (count($logs) > 0): ?>
                                 <?php foreach ($logs as $log): ?>
                                 <tr>
@@ -215,6 +215,43 @@ $logs = $stmt_log->fetchAll();
         speed: 0.4,
         connectDistance: 110
     });
+
+    // --- REALTIME FETCHING FOR USER ---
+    setInterval(() => {
+        fetch('user_stats.php')
+        .then(response => {
+            if (!response.ok) throw new Error('API Not Found');
+            return response.json();
+        })
+        .then(data => {
+            if(data.status === 'success') {
+                // 1. Update Tabel Absensi
+                document.getElementById('attendance-log-body').innerHTML = data.logs_html;
+
+                // 2. Update QR Code (jika status berubah/approved)
+                const qrContainer = document.getElementById('qr-container');
+                if (data.qr_code) {
+                    qrContainer.innerHTML = `
+                        <img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${data.qr_code}" class="img-fluid" alt="QR Code">
+                        <small class="d-block mt-2 text-dark font-monospace fw-bold">${data.qr_code}</small>
+                    `;
+                } else {
+                    qrContainer.innerHTML = `
+                        <div class="text-center text-muted py-4">
+                            <i class="fas fa-clock fa-2x mb-2"></i><br>
+                            Menunggu Approval
+                        </div>
+                    `;
+                }
+
+                // 3. Auto Reload jika status user berubah (misal di-block admin)
+                if (data.user_status !== 'active' && data.user_status !== 'pending') {
+                    window.location.reload();
+                }
+            }
+        })
+        .catch(err => console.warn("Sync paused:", err));
+    }, 3000);
 </script>
 
 </body>
