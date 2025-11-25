@@ -357,7 +357,7 @@ for ($i = 6; $i >= 0; $i--) {
 
     // --- REALTIME FETCHING (Mencegah Error 404) ---
     setInterval(() => {
-        fetch('../api/admin_stats.php')
+        fetch('admin_stats.php')
         .then(response => {
             if (!response.ok) throw new Error('API Not Found'); // Cek jika 404
             return response.json();

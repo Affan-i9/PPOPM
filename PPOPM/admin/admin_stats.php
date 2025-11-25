@@ -1,5 +1,5 @@
 <?php
-// api/admin_stats.php
+// admin/admin_stats.php
 require_once '../includes/functions.php';
 date_default_timezone_set('Asia/Jakarta');
 header('Content-Type: application/json');
