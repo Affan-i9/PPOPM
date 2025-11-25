@@ -25,10 +25,9 @@ $jam_sekarang = date('H:i');
 $tgl_sekarang = date('Y-m-d');   
 
 // --- LOGIKA 24 JAM TANPA PENOLAKAN ---
-// Default: Terlambat
-$status_keterangan = 'Terlambat'; 
+$status_keterangan = 'Terlambat'; // Default
 
-// Jika jam 06:00 sampai 16:00 -> Tepat Waktu
+// Tepat Waktu: 06:00 sampai 16:00
 if ($jam_sekarang >= '06:00' && $jam_sekarang <= '16:00') {
     $status_keterangan = 'Tepat Waktu';
 }
@@ -59,11 +58,10 @@ try {
 
     // 3. Simpan Absensi
     $insert = $pdo->prepare("INSERT INTO absensi (user_id, tanggal, waktu_absen, keterangan, scan_by_admin_id) VALUES (?, ?, ?, ?, ?)");
-    $admin_id = $_SESSION['user_id'] ?? 1;
+    $admin_id = $_SESSION['user_id'] ?? 1; // Default admin ID 1
     
     $insert->execute([$user['id'], $tgl_sekarang, $jam_sekarang, $status_keterangan, $admin_id]);
 
-    // 4. Sukses
     echo json_encode([
         'status' => 'success', 
         'message' => "Berhasil! ($status_keterangan)",

@@ -1,11 +1,10 @@
 <?php
 // admin/index.php
-
 require_once '../includes/functions.php';
 require_login();
 checkAdmin();
 
-// Initial Load Data (Data awal sebelum JS Realtime mengambil alih)
+// Initial Data Load (Agar tidak kosong saat loading awal)
 $pdo = getPDO();
 $total_atlet = $pdo->query("SELECT COUNT(*) FROM users WHERE role='user'")->fetchColumn();
 $pending = $pdo->query("SELECT COUNT(*) FROM users WHERE status='pending'")->fetchColumn();
@@ -36,16 +35,16 @@ for ($i = 6; $i >= 0; $i--) {
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     
     <style>
-        /* --- TEMA WARNA FINAL (KONTRAS TINGGI) --- */
+        /* --- TEMA KONTRAS TINGGI --- */
         :root {
             --neon-green: #00ff88;
             --neon-yellow: #ffcc00;
             --neon-red: #ff0055;
             --neon-blue: #00d4ff;
-            --dark-bg: #0a0a0a;
-            --card-bg: #151515;
+            --dark-bg: #050505;
+            --card-bg: #101010;
             --text-main: #ffffff;
-            --text-dim: #b0b0b0; /* Abu-abu terang agar terbaca di hitam */
+            --text-dim: #cccccc; /* Abu terang, BUKAN gelap */
         }
 
         body {
@@ -57,9 +56,8 @@ for ($i = 6; $i >= 0; $i--) {
 
         /* Navbar */
         .navbar {
-            background: rgba(20, 20, 20, 0.95);
+            background: rgba(10, 10, 10, 0.95);
             border-bottom: 2px solid var(--neon-green);
-            backdrop-filter: blur(10px);
         }
         .navbar-brand {
             color: var(--neon-green) !important;
@@ -73,7 +71,7 @@ for ($i = 6; $i >= 0; $i--) {
             border: 1px solid #333;
             border-radius: 12px;
             padding: 20px;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
             transition: 0.3s;
         }
         .stat-card:hover {
@@ -81,7 +79,7 @@ for ($i = 6; $i >= 0; $i--) {
             transform: translateY(-5px);
         }
         .stat-card h3 { font-size: 2.5rem; font-weight: bold; margin: 0; color: white; }
-        .stat-card .small { color: var(--text-dim) !important; font-size: 0.85rem; letter-spacing: 1px; }
+        .stat-card .small { color: var(--text-dim) !important; font-size: 0.85rem; letter-spacing: 1px; text-transform: uppercase; }
 
         /* Tombol Scan */
         .btn-scan {
@@ -89,7 +87,7 @@ for ($i = 6; $i >= 0; $i--) {
             color: black;
             font-weight: bold;
             border-radius: 50px;
-            padding: 10px 25px;
+            padding: 10px 30px;
             text-decoration: none;
             box-shadow: 0 0 15px var(--neon-green);
         }
@@ -102,14 +100,15 @@ for ($i = 6; $i >= 0; $i--) {
             border-radius: 15px;
             overflow: hidden;
         }
-        /* Override warna tabel agar teks selalu putih */
+        
+        /* Tabel Custom - Paksa Putih */
         .table-dark-custom {
             width: 100%;
             border-collapse: collapse;
             color: var(--text-main);
         }
         .table-dark-custom th {
-            background: #222;
+            background: #1a1a1a;
             color: var(--neon-yellow);
             padding: 15px;
             text-transform: uppercase;
@@ -120,17 +119,15 @@ for ($i = 6; $i >= 0; $i--) {
             padding: 15px;
             border-bottom: 1px solid #333;
             vertical-align: middle;
-            color: white !important; /* Paksa putih */
+            color: white !important; /* Paksa Warna Putih */
         }
         
-        /* Helper Text Color */
+        /* Helper */
         .text-dim { color: var(--text-dim) !important; }
-
-        /* Badge Status */
         .badge-active { background: rgba(0, 255, 136, 0.15); color: var(--neon-green); border: 1px solid var(--neon-green); padding: 5px 12px; }
         .badge-inactive { background: rgba(255, 0, 85, 0.15); color: var(--neon-red); border: 1px solid var(--neon-red); padding: 5px 12px; }
 
-        /* Modal Custom */
+        /* Modal */
         .modal-content {
             background-color: #1a1a1a;
             border: 1px solid var(--neon-green);
@@ -138,7 +135,7 @@ for ($i = 6; $i >= 0; $i--) {
         }
         .modal-header, .modal-footer { border-color: #333; }
         .btn-close-white { filter: invert(1); }
-        .detail-label { color: var(--neon-yellow); font-size: 0.9rem; opacity: 0.9; }
+        .detail-label { color: var(--neon-yellow); font-size: 0.9rem; margin-bottom: 2px; }
         .detail-value { font-size: 1.1rem; font-weight: bold; color: white; margin-bottom: 15px; }
     </style>
 </head>
@@ -151,7 +148,7 @@ for ($i = 6; $i >= 0; $i--) {
         <a class="navbar-brand" href="#"><i class="fas fa-shield-alt"></i> PPOPM ADMIN</a>
         <div class="d-flex align-items-center">
             <div class="me-3 text-dim small d-none d-md-block"><i class="fas fa-circle text-success fa-xs fa-beat"></i> Live System</div>
-            <a href="../auth/logout.php" class="btn btn-outline-danger btn-sm rounded-circle" title="Keluar">
+            <a href="../auth/logout.php" class="btn btn-outline-danger btn-sm rounded-circle">
                 <i class="fas fa-power-off"></i>
             </a>
         </div>
@@ -163,7 +160,7 @@ for ($i = 6; $i >= 0; $i--) {
     <div class="row align-items-center mb-4">
         <div class="col-8">
             <h2 class="fw-bold text-white">Dashboard</h2>
-            <p class="text-dim mb-0">Sistem Absensi Realtime</p>
+            <p class="text-dim mb-0">Overview Realtime</p>
         </div>
         <div class="col-4 text-end">
             <a href="scanner.php" class="btn-scan">
@@ -177,7 +174,7 @@ for ($i = 6; $i >= 0; $i--) {
             <div class="stat-card">
                 <div class="d-flex justify-content-between align-items-center">
                     <div>
-                        <span class="small text-uppercase text-dim">Total Atlet</span>
+                        <span class="small">Total Atlet</span>
                         <h3 id="stat-total"><?= $total_atlet ?></h3>
                     </div>
                     <i class="fas fa-users fa-3x" style="color: var(--neon-blue); opacity: 0.5;"></i>
@@ -188,7 +185,7 @@ for ($i = 6; $i >= 0; $i--) {
             <div class="stat-card">
                 <div class="d-flex justify-content-between align-items-center">
                     <div>
-                        <span class="small text-uppercase text-dim">Hadir Hari Ini</span>
+                        <span class="small">Hadir Hari Ini</span>
                         <h3 id="stat-hadir"><?= $hadir_today ?></h3>
                     </div>
                     <i class="fas fa-check-circle fa-3x" style="color: var(--neon-green); opacity: 0.5;"></i>
@@ -199,7 +196,7 @@ for ($i = 6; $i >= 0; $i--) {
             <div class="stat-card">
                 <div class="d-flex justify-content-between align-items-center">
                     <div>
-                        <span class="small text-uppercase text-dim">Pending</span>
+                        <span class="small">Pending</span>
                         <h3 id="stat-pending"><?= $pending ?></h3>
                     </div>
                     <i class="fas fa-clock fa-3x" style="color: var(--neon-yellow); opacity: 0.5;"></i>
@@ -230,7 +227,7 @@ for ($i = 6; $i >= 0; $i--) {
                                 <?php foreach ($pending_users as $u): ?>
                                 <tr>
                                     <td>
-                                        <div class="fw-bold text-white"><?= htmlspecialchars($u['nama_lengkap']) ?></div>
+                                        <div class="fw-bold"><?= htmlspecialchars($u['nama_lengkap']) ?></div>
                                         <small class="text-dim"><?= htmlspecialchars($u['cabang_olahraga']) ?></small>
                                     </td>
                                     <td class="text-end">
@@ -270,7 +267,7 @@ for ($i = 6; $i >= 0; $i--) {
                         <?php foreach ($all_users as $user): ?>
                         <tr id="row-<?= $user['id'] ?>">
                             <td class="ps-4">
-                                <span class="fw-bold text-white"><?= htmlspecialchars($user['nama_lengkap']) ?></span>
+                                <span class="fw-bold"><?= htmlspecialchars($user['nama_lengkap']) ?></span>
                             </td>
                             <td>
                                 <span class="badge bg-dark border border-secondary text-white"><?= htmlspecialchars($user['cabang_olahraga']) ?></span>
@@ -341,7 +338,6 @@ for ($i = 6; $i >= 0; $i--) {
 <script>
     initParticles('#particles-container', { count: 60, colors: ['#00ff88', '#0099ff'], speed: 0.4 });
 
-    // --- CHART SETUP ---
     const ctx = document.getElementById('attendanceChart').getContext('2d');
     const myChart = new Chart(ctx, {
         type: 'line',
@@ -350,40 +346,29 @@ for ($i = 6; $i >= 0; $i--) {
             datasets: [{
                 label: 'Hadir',
                 data: <?= json_encode($chart_data) ?>,
-                borderColor: '#00ff88',
-                backgroundColor: 'rgba(0, 255, 136, 0.1)',
-                borderWidth: 2,
-                tension: 0.3,
-                fill: true,
-                pointBackgroundColor: '#fff'
+                borderColor: '#00ff88', backgroundColor: 'rgba(0, 255, 136, 0.1)', borderWidth: 2, tension: 0.3, fill: true, pointBackgroundColor: '#fff'
             }]
         },
         options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: { legend: { display: false } },
-            scales: {
-                y: { beginAtZero: true, grid: { color: '#333' }, ticks: { color: '#ccc', stepSize: 1 } },
-                x: { grid: { display: false }, ticks: { color: '#ccc' } }
-            }
+            responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } },
+            scales: { y: { beginAtZero: true, grid: { color: '#333' }, ticks: { color: '#ccc', stepSize: 1 } }, x: { grid: { display: false }, ticks: { color: '#ccc' } } }
         }
     });
 
-    // --- REALTIME AUTO REFRESH (3 DETIK) ---
+    // --- REALTIME FETCHING (Mencegah Error 404) ---
     setInterval(() => {
         fetch('../api/admin_stats.php')
-        .then(response => response.json())
+        .then(response => {
+            if (!response.ok) throw new Error('API Not Found'); // Cek jika 404
+            return response.json();
+        })
         .then(data => {
             if(data.status === 'success') {
-                // Update Angka
                 document.getElementById('stat-total').innerText = data.total_atlet;
                 document.getElementById('stat-hadir').innerText = data.hadir_today;
                 document.getElementById('stat-pending').innerText = data.pending_count;
-                
-                // Update Tabel Pending
                 document.getElementById('table-pending-body').innerHTML = data.pending_html;
-
-                // Update Chart
+                
                 const currentData = myChart.data.datasets[0].data;
                 const newData = data.chart_data;
                 if(JSON.stringify(currentData) !== JSON.stringify(newData)) {
@@ -392,10 +377,11 @@ for ($i = 6; $i >= 0; $i--) {
                 }
             }
         })
-        .catch(err => console.error("Realtime fetch error", err));
+        .catch(err => {
+            console.warn("Realtime sync paused (API not ready)."); 
+        });
     }, 3000);
 
-    // --- FUNGSI TOMBOL ---
     function viewUser(id) {
         fetch('user_action.php', { method: 'POST', body: JSON.stringify({ action: 'get_detail', id: id }) })
         .then(res => res.json()).then(res => {
@@ -419,9 +405,7 @@ for ($i = 6; $i >= 0; $i--) {
         }).then((result) => {
             if (result.isConfirmed) {
                 fetch('user_action.php', { method: 'POST', body: JSON.stringify({ action: 'toggle_status', id: id }) })
-                .then(res => res.json()).then(res => {
-                    if(res.status === 'success') { location.reload(); }
-                });
+                .then(res => res.json()).then(res => { if(res.status === 'success') location.reload(); });
             }
         })
     }
