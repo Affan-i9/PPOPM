@@ -4,27 +4,23 @@ require_once '../includes/functions.php';
 require_login();
 checkAdmin();
 
-// SET TIMEZONE WIB AGAR KONSISTEN
+// SET TIMEZONE WIB
 date_default_timezone_set('Asia/Jakarta');
-$today = date('Y-m-d'); // Tanggal Hari Ini (WIB)
+$today = date('Y-m-d'); 
 
 $pdo = getPDO();
 
-// Initial Data Load (Gunakan $today, JANGAN CURDATE())
+// Initial Data Load
 $total_atlet = $pdo->query("SELECT COUNT(*) FROM users WHERE role='user'")->fetchColumn();
 $pending = $pdo->query("SELECT COUNT(*) FROM users WHERE status='pending'")->fetchColumn();
 $hadir_today = $pdo->query("SELECT COUNT(DISTINCT user_id) FROM absensi WHERE tanggal = '$today'")->fetchColumn();
 $pending_users = $pdo->query("SELECT * FROM users WHERE status = 'pending' ORDER BY created_at DESC")->fetchAll();
 $all_users = $pdo->query("SELECT * FROM users WHERE role='user' AND status IN ('active', 'inactive') ORDER BY nama_lengkap ASC")->fetchAll();
 
-// Chart Data Init (Pastikan Loop menggunakan WIB)
-$chart_labels = [];
-$chart_data = [];
-for ($i = 6; $i >= 0; $i--) {
-    $date = date('Y-m-d', strtotime("-$i days")); // Mundur 6 hari ke belakang dari WIB
-    $chart_labels[] = date('d M', strtotime($date));
-    $chart_data[] = $pdo->query("SELECT COUNT(DISTINCT user_id) FROM absensi WHERE tanggal = '$date'")->fetchColumn();
-}
+// Init Chart Data Kosong (Nanti diisi via JS/API)
+$chart_labels = []; 
+$chart_ib = [];
+$chart_gate = [];
 ?>
 
 <!DOCTYPE html>
@@ -86,7 +82,7 @@ for ($i = 6; $i >= 0; $i--) {
     <!-- Statistik -->
     <div class="row mb-4">
         <div class="col-md-4 mb-3"><div class="stat-card"><div class="d-flex justify-content-between align-items-center"><div><span class="small text-dim">Total Atlet</span><h3 id="stat-total"><?= $total_atlet ?></h3></div><i class="fas fa-users fa-3x" style="color:var(--neon-blue);opacity:0.5"></i></div></div></div>
-        <div class="col-md-4 mb-3"><div class="stat-card"><div class="d-flex justify-content-between align-items-center"><div><span class="small text-dim">Hadir Hari Ini</span><h3 id="stat-hadir"><?= $hadir_today ?></h3></div><i class="fas fa-check-circle fa-3x" style="color:var(--neon-green);opacity:0.5"></i></div></div></div>
+        <div class="col-md-4 mb-3"><div class="stat-card"><div class="d-flex justify-content-between align-items-center"><div><span class="small text-dim">Aktivitas Hari Ini</span><h3 id="stat-hadir"><?= $hadir_today ?></h3></div><i class="fas fa-check-circle fa-3x" style="color:var(--neon-green);opacity:0.5"></i></div></div></div>
         <div class="col-md-4 mb-3"><div class="stat-card"><div class="d-flex justify-content-between align-items-center"><div><span class="small text-dim">Pending</span><h3 id="stat-pending"><?= $pending ?></h3></div><i class="fas fa-clock fa-3x" style="color:var(--neon-yellow);opacity:0.5"></i></div></div></div>
     </div>
 
@@ -94,7 +90,7 @@ for ($i = 6; $i >= 0; $i--) {
         <!-- Grafik -->
         <div class="col-lg-8 mb-4">
             <div class="card-table p-3 h-100">
-                <h5 class="text-white mb-3 ms-2"><i class="fas fa-chart-line text-info"></i> Grafik 7 Hari</h5>
+                <h5 class="text-white mb-3 ms-2"><i class="fas fa-chart-line text-info"></i> Statistik Mingguan</h5>
                 <div style="height: 250px; width: 100%;"><canvas id="attendanceChart"></canvas></div>
             </div>
         </div>
@@ -156,7 +152,7 @@ for ($i = 6; $i >= 0; $i--) {
     </div>
 </div>
 
-<!-- Modal Edit, Reset Pass, Manual Absen (Sama seperti sebelumnya) -->
+<!-- Modal Edit, Reset Pass, Manual Absen -->
 <div class="modal fade" id="modalEdit" tabindex="-1"><div class="modal-dialog"><div class="modal-content"><div class="modal-header"><h5 class="modal-title">Edit Atlet</h5><button class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div><div class="modal-body"><input type="hidden" id="edit_id"><div class="mb-3"><label>Nama</label><input type="text" id="edit_nama" class="form-control form-control-dark"></div><div class="mb-3"><label>Cabor</label><input type="text" id="edit_cabor" class="form-control form-control-dark"></div><div class="mb-3"><label>Email</label><input type="email" id="edit_email" class="form-control form-control-dark"></div><div class="mb-3"><label>Telepon</label><input type="text" id="edit_telepon" class="form-control form-control-dark"></div></div><div class="modal-footer"><button onclick="simpanEdit()" class="btn btn-success w-100">Simpan</button></div></div></div></div>
 
 <div class="modal fade" id="modalManual" tabindex="-1"><div class="modal-dialog"><div class="modal-content"><div class="modal-header"><h5 class="modal-title text-warning">Absen Manual</h5><button class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div><div class="modal-body"><div class="mb-3"><label>Pilih Atlet</label><select id="manual_user_id" class="form-control form-control-dark"><?php foreach($all_users as $u): if($u['status']=='active'): ?><option value="<?= $u['id'] ?>"><?= $u['nama_lengkap'] ?></option><?php endif; endforeach; ?></select></div></div><div class="modal-footer"><button onclick="prosesManual()" class="btn btn-warning w-100 fw-bold">Absen</button></div></div></div></div>
@@ -166,29 +162,42 @@ for ($i = 6; $i >= 0; $i--) {
 <script>
     initParticles('#particles-container', { count: 60, colors: ['#00ff88', '#0099ff'], speed: 0.4 });
     
-    // CHART JS (Warna Hijau & Titik Putih)
+    // SETUP CHART JS (DUA DATASET)
     const ctx = document.getElementById('attendanceChart').getContext('2d');
     const myChart = new Chart(ctx, {
         type: 'line',
         data: {
-            labels: <?= json_encode($chart_labels) ?>,
-            datasets: [{ 
-                label: 'Hadir', 
-                data: <?= json_encode($chart_data) ?>, 
-                borderColor: '#00ff88', 
-                backgroundColor: 'rgba(0, 255, 136, 0.15)', 
-                borderWidth: 2, 
-                tension: 0.3, 
-                fill: true,
-                pointBackgroundColor: '#ffffff', // Titik Putih agar terlihat
-                pointBorderColor: '#00ff88',
-                pointRadius: 4
-            }]
+            labels: [], // Diisi via API
+            datasets: [
+                { 
+                    label: 'IB / Asrama', 
+                    data: [], 
+                    borderColor: '#00ff88', // HIJAU
+                    backgroundColor: 'rgba(0, 255, 136, 0.1)', 
+                    borderWidth: 2, 
+                    tension: 0.3,
+                    pointBackgroundColor: '#fff',
+                    pointRadius: 4
+                },
+                { 
+                    label: 'Ijin Keluar', 
+                    data: [], 
+                    borderColor: '#ffcc00', // KUNING
+                    backgroundColor: 'rgba(255, 204, 0, 0.1)', 
+                    borderWidth: 2, 
+                    borderDash: [5, 5], // Garis putus-putus biar beda
+                    tension: 0.3,
+                    pointBackgroundColor: '#fff',
+                    pointRadius: 4
+                }
+            ]
         },
         options: { 
             responsive: true, 
             maintainAspectRatio: false, 
-            plugins: { legend: { display: false } }, 
+            plugins: { 
+                legend: { display: true, labels: { color: '#ccc' } } 
+            }, 
             scales: { 
                 y: { beginAtZero: true, grid: { color: '#333' }, ticks: { color: '#ccc', stepSize: 1 } }, 
                 x: { grid: { display: false }, ticks: { color: '#ccc' } } 
@@ -206,14 +215,21 @@ for ($i = 6; $i >= 0; $i--) {
                 document.getElementById('stat-hadir').innerText = data.hadir_today;
                 document.getElementById('stat-pending').innerText = data.pending_count;
                 document.getElementById('table-pending-body').innerHTML = data.pending_html;
-                if(JSON.stringify(myChart.data.datasets[0].data) !== JSON.stringify(data.chart_data)) {
-                    myChart.data.datasets[0].data = data.chart_data; myChart.update();
+                
+                // Update Grafik
+                if(JSON.stringify(myChart.data.datasets[0].data) !== JSON.stringify(data.chart_data_ib) || 
+                   JSON.stringify(myChart.data.datasets[1].data) !== JSON.stringify(data.chart_data_gate)) {
+                    
+                    myChart.data.labels = data.chart_labels;
+                    myChart.data.datasets[0].data = data.chart_data_ib;
+                    myChart.data.datasets[1].data = data.chart_data_gate;
+                    myChart.update();
                 }
             }
         }).catch(e=>{});
     }, 3000);
 
-    // FUNGSI JS (Sama seperti sebelumnya)
+    // FUNGSI JS
     function bukaModalManual() { new bootstrap.Modal(document.getElementById('modalManual')).show(); }
     function prosesManual() {
         fetch('user_action.php', { method: 'POST', body: JSON.stringify({ action: 'manual_absen', user_id: document.getElementById('manual_user_id').value }) })

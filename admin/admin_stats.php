@@ -16,9 +16,26 @@ if (!isset($_SESSION['role']) || $_SESSION['role'] !== 'admin') {
 
 $pdo = getPDO();
 
+// --- SAFEGUARD DATABASE ---
+// Cek apakah kolom 'kategori' sudah ada di tabel absensi. 
+// Jika belum, panggil ensure_schema() untuk update struktur DB.
+try {
+    $cek_kolom = $pdo->query("SHOW COLUMNS FROM absensi LIKE 'kategori'");
+    if ($cek_kolom->rowCount() == 0) {
+        ensure_schema(); // Auto-fix database structure
+    }
+} catch (Exception $e) {
+    // Silent error
+}
+
+// STATISTIK UTAMA
 $total_atlet = $pdo->query("SELECT COUNT(*) FROM users WHERE role='user'")->fetchColumn();
 $pending = $pdo->query("SELECT COUNT(*) FROM users WHERE status='pending'")->fetchColumn();
+
+// Hadir Today = Total unik orang yang melakukan aktivitas apapun hari ini
 $hadir_today = $pdo->query("SELECT COUNT(DISTINCT user_id) FROM absensi WHERE tanggal = '$today'")->fetchColumn();
+
+// List Pending Approval
 $pending_users = $pdo->query("SELECT * FROM users WHERE status = 'pending' ORDER BY created_at DESC")->fetchAll();
 
 $pending_html = '';
@@ -32,10 +49,23 @@ if (count($pending_users) > 0) {
     $pending_html = "<tr><td class='text-center text-dim py-5'>Kosong.</td></tr>";
 }
 
-$chart_data = [];
+// --- LOGIKA BARU UNTUK GRAFIK TERPISAH ---
+$chart_ib = [];
+$chart_gate = [];
+$chart_labels = [];
+
 for ($i = 6; $i >= 0; $i--) {
     $date = date('Y-m-d', strtotime("-$i days"));
-    $chart_data[] = $pdo->query("SELECT COUNT(DISTINCT user_id) FROM absensi WHERE tanggal = '$date'")->fetchColumn();
+    $chart_labels[] = date('d M', strtotime($date));
+    
+    // Hitung IB (Asrama) - Pastikan query handle error jika kolom belum siap
+    try {
+        $chart_ib[] = $pdo->query("SELECT COUNT(DISTINCT user_id) FROM absensi WHERE tanggal = '$date' AND kategori = 'IB'")->fetchColumn();
+        $chart_gate[] = $pdo->query("SELECT COUNT(DISTINCT user_id) FROM absensi WHERE tanggal = '$date' AND kategori = 'GATE_PASS'")->fetchColumn();
+    } catch (Exception $e) {
+        $chart_ib[] = 0;
+        $chart_gate[] = 0;
+    }
 }
 
 echo json_encode([
@@ -44,6 +74,8 @@ echo json_encode([
     'hadir_today' => $hadir_today,
     'pending_count' => $pending,
     'pending_html' => $pending_html,
-    'chart_data' => $chart_data
+    'chart_labels' => $chart_labels, // Kirim label tanggal dari server
+    'chart_data_ib' => $chart_ib,    // Data Garis Hijau
+    'chart_data_gate' => $chart_gate // Data Garis Kuning
 ]);
 ?>
